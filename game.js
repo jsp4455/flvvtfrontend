@@ -1,12 +1,13 @@
-console.log("FLVVT Gauntlet engine loaded");
+console.log("FLVVT One-Screen Engine Loaded");
 
 // =========================
 // CONFIG
 // =========================
-const API = "https://echoloop-backend.onrender.com"; // <-- set this
-const TICK_RATE = 1000 / 60; // 60 FPS
-const BASE_HAZARD_SPAWN = 1200; // ms
+const API = "https://echoloop-backend.onrender.com"; // <-- SET THIS
+const WS_URL = API.replace(/^http/, "ws");
+
 const PLAYER_SPEED = 4;
+const BASE_SPAWN = 1200;
 
 // =========================
 // DOM
@@ -14,29 +15,36 @@ const PLAYER_SPEED = 4;
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+const usernameInput = document.getElementById("usernameInput");
+const startBtn = document.getElementById("startBtn");
+
 const scoreEl = document.getElementById("score");
 const phaseEl = document.getElementById("phase");
 const statusEl = document.getElementById("status");
-const playerNameEl = document.getElementById("playerName");
 
-const startBtn = document.getElementById("startBtn");
-const endBtn = document.getElementById("endBtn");
+const overlay = document.getElementById("overlay");
+const finalScoreEl = document.getElementById("finalScore");
+const finalPhaseEl = document.getElementById("finalPhase");
+const leaderboardListEl = document.getElementById("leaderboardList");
+const closeOverlayBtn = document.getElementById("closeOverlay");
 
 // =========================
 // STATE
 // =========================
-let playerId = localStorage.getItem("playerId") || null;
-let playerName = localStorage.getItem("playerName") || "Unknown";
+let playerId = null;
+let playerName = null;
 
 let running = false;
 let score = 0;
 let phase = 1;
 let startTime = 0;
-let lastFrameTime = 0;
+let lastFrame = 0;
 let hazardTimer = 0;
+let moodMultiplier = 1;
 
 let hazards = [];
 let keys = {};
+let ws = null;
 
 const player = {
   x: canvas.width / 2,
@@ -47,26 +55,36 @@ const player = {
 // =========================
 // BACKEND
 // =========================
-async function submitRun() {
-  if (!playerId) {
-    console.warn("No playerId, not submitting run.");
-    return;
-  }
+async function registerPlayer(name) {
+  const res = await fetch(`${API}/player/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: name })
+  });
+  return res.json();
+}
 
-  try {
-    await fetch(`${API}/game/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        player_id: Number(playerId),
-        score,
-        phase
-      })
-    });
-    console.log("Run submitted:", { score, phase });
-  } catch (err) {
-    console.error("Submit failed:", err);
-  }
+async function submitRun() {
+  if (!playerId) return;
+
+  await fetch(`${API}/game/submit`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      player_id: Number(playerId),
+      score,
+      phase
+    })
+  });
+}
+
+async function loadLeaderboard() {
+  const res = await fetch(`${API}/leaderboard`);
+  const data = await res.json();
+
+  leaderboardListEl.textContent = data
+    .map((e, i) => `${i + 1}. ${e.username} — ${e.score} (phase ${e.phase})`)
+    .join("\n");
 }
 
 // =========================
@@ -74,8 +92,8 @@ async function submitRun() {
 // =========================
 document.addEventListener("keydown", (e) => {
   keys[e.key.toLowerCase()] = true;
-  if (e.code === "Space") startRun();
-  if (e.code === "Escape") endRun();
+  if (e.code === "Space") startGame();
+  if (e.code === "Escape") endGame();
 });
 
 document.addEventListener("keyup", (e) => {
@@ -83,50 +101,67 @@ document.addEventListener("keyup", (e) => {
 });
 
 // =========================
-// GAME CONTROL
+// GAME FLOW
 // =========================
-function resetState() {
-  hazards = [];
-  score = 0;
-  phase = 1;
-  startTime = performance.now();
-  lastFrameTime = startTime;
-  hazardTimer = 0;
-  player.x = canvas.width / 2;
-  player.y = canvas.height / 2;
-}
-
-function startRun() {
-  if (!playerId) {
-    alert("You must register first (backend side).");
-    return;
-  }
+async function startGame() {
   if (running) return;
 
+  const name = usernameInput.value.trim();
+  if (!name) return alert("Enter a name first.");
+
+  if (!playerId) {
+    const data = await registerPlayer(name);
+    playerId = data.id;
+    playerName = name;
+    localStorage.setItem("playerId", playerId);
+    localStorage.setItem("playerName", name);
+  }
+
+  overlay.classList.add("hidden");
+
   running = true;
-  resetState();
+  score = 0;
+  phase = 1;
+  hazards = [];
+  startTime = performance.now();
+  lastFrame = startTime;
+  hazardTimer = 0;
+
+  player.x = canvas.width / 2;
+  player.y = canvas.height / 2;
+
   statusEl.textContent = "RUNNING";
+
   requestAnimationFrame(loop);
 }
 
-async function endRun() {
+async function endGame() {
   if (!running) return;
+
   running = false;
   statusEl.textContent = "ENDED";
+
   await submitRun();
+  await showOverlay();
 }
 
-startBtn.onclick = startRun;
-endBtn.onclick = endRun;
+async function showOverlay() {
+  finalScoreEl.textContent = score;
+  finalPhaseEl.textContent = phase;
+  await loadLeaderboard();
+  overlay.classList.remove("hidden");
+}
+
+closeOverlayBtn.onclick = () => overlay.classList.add("hidden");
 
 // =========================
 // GAME LOOP
 // =========================
-function loop(timestamp) {
+function loop(t) {
   if (!running) return;
 
-  const dt = timestamp - lastFrameTime;
-  lastFrameTime = timestamp;
+  const dt = t - lastFrame;
+  lastFrame = t;
 
   update(dt);
   render();
@@ -135,49 +170,45 @@ function loop(timestamp) {
 }
 
 function update(dt) {
-  // time & score
-  const elapsed = (lastFrameTime - startTime) / 1000;
-  score = Math.floor(elapsed * 10);
+  const elapsed = (lastFrame - startTime) / 1000;
+  score = Math.floor(elapsed * 10 * moodMultiplier);
   phase = 1 + Math.floor(elapsed / 10);
 
   scoreEl.textContent = score;
   phaseEl.textContent = phase;
 
-  // player movement
+  // movement
   let dx = 0, dy = 0;
   if (keys["w"] || keys["arrowup"]) dy -= 1;
   if (keys["s"] || keys["arrowdown"]) dy += 1;
   if (keys["a"] || keys["arrowleft"]) dx -= 1;
   if (keys["d"] || keys["arrowright"]) dx += 1;
 
-  if (dx !== 0 || dy !== 0) {
-    const len = Math.hypot(dx, dy) || 1;
+  if (dx || dy) {
+    const len = Math.hypot(dx, dy);
     dx /= len;
     dy /= len;
     player.x += dx * PLAYER_SPEED;
     player.y += dy * PLAYER_SPEED;
   }
 
-  // clamp player
   player.x = Math.max(player.r, Math.min(canvas.width - player.r, player.x));
   player.y = Math.max(player.r, Math.min(canvas.height - player.r, player.y));
 
-  // hazard spawn rate scales with phase
+  // hazards
   hazardTimer += dt;
-  const spawnInterval = BASE_HAZARD_SPAWN / Math.max(1, phase * 0.7);
+  const spawnRate = (BASE_SPAWN / (phase * 0.7)) / moodMultiplier;
 
-  if (hazardTimer >= spawnInterval) {
+  if (hazardTimer >= spawnRate) {
     hazardTimer = 0;
     spawnHazard();
   }
 
-  // update hazards
   for (let h of hazards) {
     h.x += h.vx;
     h.y += h.vy;
   }
 
-  // remove offscreen hazards
   hazards = hazards.filter(
     (h) =>
       h.x > -50 &&
@@ -186,14 +217,9 @@ function update(dt) {
       h.y < canvas.height + 50
   );
 
-  // collision
   for (let h of hazards) {
-    const dist = Math.hypot(h.x - player.x, h.y - player.y);
-    if (dist < player.r + h.r) {
-      // hit
-      running = false;
-      statusEl.textContent = "HIT";
-      submitRun();
+    if (Math.hypot(h.x - player.x, h.y - player.y) < player.r + h.r) {
+      endGame();
       return;
     }
   }
@@ -203,36 +229,22 @@ function update(dt) {
 // HAZARDS
 // =========================
 function spawnHazard() {
-  // spawn from random edge, move inward
   const edge = Math.floor(Math.random() * 4);
-  let x, y, vx, vy;
+  let x, y;
 
-  const speed = 1.5 + phase * 0.3;
+  if (edge === 0) { x = Math.random() * canvas.width; y = -20; }
+  else if (edge === 1) { x = Math.random() * canvas.width; y = canvas.height + 20; }
+  else if (edge === 2) { x = -20; y = Math.random() * canvas.height; }
+  else { x = canvas.width + 20; y = Math.random() * canvas.height; }
 
-  if (edge === 0) { // top
-    x = Math.random() * canvas.width;
-    y = -20;
-  } else if (edge === 1) { // bottom
-    x = Math.random() * canvas.width;
-    y = canvas.height + 20;
-  } else if (edge === 2) { // left
-    x = -20;
-    y = Math.random() * canvas.height;
-  } else { // right
-    x = canvas.width + 20;
-    y = Math.random() * canvas.height;
-  }
-
-  // aim roughly at player with some randomness
+  const speed = (1.5 + phase * 0.3) * moodMultiplier;
   const angle = Math.atan2(player.y - y, player.x - x) + (Math.random() - 0.5) * 0.6;
-  vx = Math.cos(angle) * speed;
-  vy = Math.sin(angle) * speed;
 
   hazards.push({
     x,
     y,
-    vx,
-    vy,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
     r: 10 + Math.random() * 8
   });
 }
@@ -243,30 +255,14 @@ function spawnHazard() {
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // background
-  const grd = ctx.createRadialGradient(
-    canvas.width / 2,
-    canvas.height / 2,
-    50,
-    canvas.width / 2,
-    canvas.height / 2,
-    400
-  );
-  grd.addColorStop(0, "#1a0033");
-  grd.addColorStop(1, "#02020a");
-  ctx.fillStyle = grd;
+  ctx.fillStyle = "#02020a";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // player
   ctx.beginPath();
   ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
   ctx.fillStyle = "#00ffcc";
   ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "#ffffff";
-  ctx.stroke();
 
-  // hazards
   for (let h of hazards) {
     ctx.beginPath();
     ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
@@ -276,10 +272,38 @@ function render() {
 }
 
 // =========================
+// WEBSOCKETS (mood storms)
+// =========================
+function connectWS() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+
+    if (data.type === "mood_storm") {
+      handleMoodStorm(data.mood);
+    }
+  };
+
+  ws.onclose = () => setTimeout(connectWS, 2000);
+}
+
+function handleMoodStorm(mood) {
+  document.body.classList.add(`storm-${mood}`);
+
+  if (mood === "happy") moodMultiplier = 0.8;
+  else if (mood === "angry") moodMultiplier = 1.4;
+  else if (mood === "dreamy") moodMultiplier = 1.2;
+  else moodMultiplier = 1.0;
+
+  setTimeout(() => {
+    document.body.classList.remove(`storm-${mood}`);
+    moodMultiplier = 1.0;
+  }, 4000);
+}
+
+// =========================
 // INIT
 // =========================
-playerNameEl.textContent = playerName;
-statusEl.textContent = "IDLE";
-scoreEl.textContent = "0";
-phaseEl.textContent = "1";
+connectWS();
 render();
