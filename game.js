@@ -3,7 +3,7 @@ console.log("FLVVT Game frontend loaded");
 // =========================
 // CONFIG
 // =========================
-const API = "https://YOUR-BACKEND-URL.onrender.com"; // <-- UPDATE THIS
+const API = "https://echoloop-backend.onrender.com"; // <-- UPDATE THIS
 
 
 // =========================
