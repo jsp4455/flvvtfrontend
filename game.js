@@ -1,7 +1,7 @@
 // =========================
 // CONFIG
 // =========================
-const API = "https://flvvtbackend.onrender.com";
+const API = "https://echoloop-backend.onrender.com";
 // When deployed: "https://flvvt-backend.onrender.com"
 
 // =========================
