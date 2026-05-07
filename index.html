@@ -6,23 +6,32 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="ui">
-    <div class="row">
-      <div>Player: <span id="playerName">Unknown</span></div>
-      <div>Phase: <span id="phase">1</span></div>
-      <div>Score: <span id="score">0</span></div>
-      <div>Status: <span id="status">IDLE</span></div>
-    </div>
-    <div class="row">
-      <button id="startBtn">Start Run</button>
-      <button id="endBtn">End Run</button>
-    </div>
-    <div class="row small">
-      <span>Move: WASD / Arrows • Start: Space • End: Esc</span>
+
+  <div id="topUI">
+    <input id="usernameInput" placeholder="Enter name..." maxlength="16">
+    <button id="startBtn">Start</button>
+
+    <div id="hud">
+      <span>Phase: <b id="phase">1</b></span>
+      <span>Score: <b id="score">0</b></span>
+      <span>Status: <b id="status">IDLE</b></span>
     </div>
   </div>
 
   <canvas id="gameCanvas" width="800" height="450"></canvas>
+
+  <!-- Leaderboard overlay -->
+  <div id="overlay" class="hidden">
+    <div class="overlay-inner">
+      <h2>Run Over</h2>
+      <p>Your score: <span id="finalScore">0</span> • Phase: <span id="finalPhase">1</span></p>
+
+      <h3>Leaderboard</h3>
+      <pre id="leaderboardList"></pre>
+
+      <button id="closeOverlay">Close</button>
+    </div>
+  </div>
 
   <script src="game.js"></script>
 </body>
