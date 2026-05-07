@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  background: radial-gradient(circle at top, #4b00ff, #050014 60%, #000);
+  background: #000;
   color: #fff;
   font-family: system-ui, sans-serif;
   display: flex;
@@ -8,32 +8,29 @@ body {
   align-items: center;
 }
 
-#ui {
+#topUI {
   width: 800px;
-  padding: 10px 0;
-  text-align: center;
-}
-
-.row {
   display: flex;
   justify-content: space-between;
-  margin: 4px 0;
+  padding: 10px;
 }
 
-.row.small {
-  font-size: 12px;
-  opacity: 0.7;
-  justify-content: center;
+#usernameInput {
+  padding: 8px;
+  font-size: 16px;
+  width: 180px;
+}
+
+#hud span {
+  margin-left: 20px;
 }
 
 button {
   padding: 8px 16px;
-  font-size: 14px;
-  cursor: pointer;
   background: #111;
+  border: 1px solid #444;
   color: #fff;
-  border: 1px solid #555;
-  border-radius: 4px;
+  cursor: pointer;
 }
 
 button:hover {
@@ -43,5 +40,40 @@ button:hover {
 #gameCanvas {
   border: 1px solid #333;
   background: #02020a;
-  box-shadow: 0 0 30px rgba(0,0,0,0.8);
+  margin-top: 10px;
 }
+
+/* Overlay */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#overlay.hidden {
+  display: none;
+}
+
+.overlay-inner {
+  background: #050014;
+  padding: 20px;
+  width: 420px;
+  border: 1px solid #555;
+}
+
+.overlay-inner pre {
+  background: #02020a;
+  padding: 10px;
+  font-size: 12px;
+  height: 200px;
+  overflow: auto;
+}
+
+/* Mood storms */
+body.storm-happy { background: #004433; }
+body.storm-angry { background: #330000; }
+body.storm-sad { background: #000033; }
+body.storm-dreamy { background: #330033; }
