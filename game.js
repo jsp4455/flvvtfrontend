@@ -3,7 +3,7 @@ console.log("FLVVT Gauntlet engine loaded");
 // =========================
 // CONFIG
 // =========================
-const API = "https://YOUR-BACKEND-URL.onrender.com"; // <-- set this
+const API = "https://echoloop-backend.onrender.com"; // <-- set this
 const TICK_RATE = 1000 / 60; // 60 FPS
 const BASE_HAZARD_SPAWN = 1200; // ms
 const PLAYER_SPEED = 4;
