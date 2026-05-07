@@ -1,0 +1,71 @@
+body {
+  margin: 0;
+  background: radial-gradient(circle at top, #1a1030 0, #05030a 60%, #000000 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-family: 'Montserrat', sans-serif;
+}
+
+#gameCanvas {
+  background: rgba(5, 5, 15, 0.95);
+  border-radius: 18px;
+  box-shadow:
+    0 0 40px #7b2cff55,
+    0 0 80px #00f5ff33;
+}
+
+/* START SCREEN */
+#startScreen {
+  position: absolute;
+  width: 900px;
+  height: 600px;
+  background: rgba(5, 5, 15, 0.92);
+  border-radius: 18px;
+  box-shadow: 0 0 40px #7b2cffaa;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.6s ease;
+}
+
+#startScreen h1 {
+  font-size: 60px;
+  color: #b084ff;
+  text-shadow: 0 0 25px #b084ff;
+  margin-bottom: 40px;
+}
+
+.regPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 300px;
+}
+
+.regPanel input {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 16px;
+}
+
+.regPanel button {
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  background: #7b2cff;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 0 15px #7b2cffaa;
+}
+
+.regPanel button:hover {
+  background: #9d5cff;
+}
