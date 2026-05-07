@@ -2,33 +2,27 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>FLVVT Game</title>
-  <style>
-    body { background: #000; color: #fff; font-family: Arial; text-align: center; }
-    #register, #game, #leaderboard { margin-top: 40px; }
-    input { padding: 10px; font-size: 16px; }
-    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
-  </style>
+  <title>FLVVT Gauntlet</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <h1>FLVVT Game</h1>
-
-  <div id="register">
-    <h2>Register Player</h2>
-    <input id="username" placeholder="Username">
-    <button id="registerBtn">Register</button>
+  <div id="ui">
+    <div class="row">
+      <div>Player: <span id="playerName">Unknown</span></div>
+      <div>Phase: <span id="phase">1</span></div>
+      <div>Score: <span id="score">0</span></div>
+      <div>Status: <span id="status">IDLE</span></div>
+    </div>
+    <div class="row">
+      <button id="startBtn">Start Run</button>
+      <button id="endBtn">End Run</button>
+    </div>
+    <div class="row small">
+      <span>Move: WASD / Arrows • Start: Space • End: Esc</span>
+    </div>
   </div>
 
-  <div id="game" style="display:none;">
-    <h2>Game Running...</h2>
-    <button id="submitRunBtn">Submit Fake Run</button>
-  </div>
-
-  <div id="leaderboard" style="display:none;">
-    <h2>Leaderboard</h2>
-    <pre id="lb"></pre>
-  </div>
+  <canvas id="gameCanvas" width="800" height="450"></canvas>
 
   <script src="game.js"></script>
 </body>
